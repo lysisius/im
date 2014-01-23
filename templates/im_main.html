@@ -5,27 +5,23 @@
   <b>{{username}}</b> -
   <a href="/logout">Logout</a>
 </div>
-<div id="inbox">
-    <h3>inbox <a href="/">refresh</a></h3>
-    {% for message in messages %}
-    {% module Template("im_msg.html", message=message) %}
-    {% end %}
-</div>
 <div id="users">
-    <h3>all users</h3>
+    <h3>online users</h3>
     <ul>
     {% for user in all_users %}
         <li>{{user['username']}}</li>
     {% end %}
     </ul>
 </div>
-
 <div id="send">
     <form action="/msg/new" method="post" id="messageform">
       <table>
         <tr>
           <td><input name="dst" id="dst" placeholder='usrname', style="width:100px"/></td>
+        </tr>
+        <tr>
           <td><input name="body" id="body" placeholder='msg body', style="width:400px"/></td>
+        </tr>
           <td style="padding-left:5px">
             <input type="submit" value="Send"/>
           </td>
@@ -33,5 +29,37 @@
       </table>
     </form>
 
+<div id="groups">
+    <h3>groups</h3>
+    <ul> 
+    {% for grp in groups %}
+        <li>{{grp}}</li>
+    {% end %}
+    </ul>
 </div>
+
+<div id="send">
+    <form action="/grpmsg/new" method="post" id="grpmessageform">
+      <table>
+        <tr>
+          <td><input name="grpdst" id="grpdst" placeholder='group name', style="width:100px"/></td>
+        </tr>
+        <tr>
+          <td><input name="grpbody" id="grpbody" placeholder='msg body', style="width:400px"/></td>
+        </tr>
+        <tr>
+          <td style="padding-left:5px">
+            <input type="submit" value="Send"/>
+          </td>
+        </tr>
+      </table>
+    </form>
+</div>
+<div id="inbox">
+    <h3>inbox <a href="/">refresh</a></h3>
+    {% for message in messages %}
+    {% module Template("im_msg.html", message=message) %}
+    {% end %}
+</div>
+
 {% end %}

@@ -11,6 +11,10 @@ class SessionDAO:
     # will start a new session id by adding a new document to the sessions collection
     # returns the sessionID or None
     def start_session(self, username):
+        # clear the existing session for the same user
+        session = self.get_session_by_username(username)
+        if session:
+            self.end_session(session['_id'])
         session_id = self.get_random_str(32)
         session = {'username': username, '_id': session_id}
         try:
@@ -27,6 +31,9 @@ class SessionDAO:
             return
         self.sessions.remove({'_id': session_id})
         return
+
+    def get_session_by_username(self, username):
+        return self.sessions.find_one({'username':username})
 
     # if there is a valid session, it is returned
     def get_session(self, session_id):

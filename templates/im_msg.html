@@ -1,1 +1,4 @@
-<div class="message" id="m{{ message["id"] }}"><b>{{ message["from"] }}: </b>{% module linkify(message["body"]) %}</div>
+<div class="message" id="m{{ message["_id"] }}">
+    <b>{{ message["src"] }}: </b>{% module linkify(message["body"]) %}
+    <a href="/msg/del/{{message["_id"]}}">delete</a>
+</div>

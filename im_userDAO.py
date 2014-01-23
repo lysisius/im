@@ -46,7 +46,7 @@ class UserDAO:
         password_hash = self.make_pw_hash(password)
 
         user = {'_id': username, 'password': password_hash,
-                'inbox': []}
+                'groups': ['all']}
         if email != "":
             user['email'] = email
 

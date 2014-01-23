@@ -8,7 +8,9 @@ from tornado.options import define, options
 import pymongo
 import im_userDAO
 import im_sessionDAO
+import im_inboxDAO
 import re
+import urllib
 
 define("port", default=8887, help="run on the given port", type=int)
 
@@ -21,14 +23,18 @@ class IndexHandler(tornado.web.RequestHandler):
         # get online usernames
         all_users = sessions.get_sessions()
         # get inbox, contacts, groups
+
         user = users.get_user(username)
         if not user:
             self.redirect('/signup')
         else:
+            groups = user['groups']
+            messages = inbox.get_msg(username, groups)
             self.render('im_main.html', 
                         username=username, 
-                        messages=user.get('inbox'),
-                        all_users = all_users)
+                        messages=messages,
+                        all_users = all_users,
+                        groups=groups)
 
 class MsgHandler(tornado.web.RequestHandler):
     def post(self):
@@ -40,9 +46,38 @@ class MsgHandler(tornado.web.RequestHandler):
         # user = users.
         dst = self.get_argument('dst', '') 
         body = self.get_argument('body', '')
-        users.send_msg(username, dst, body)
+        # users.send_msg(username, dst, body)
+        inbox.send(dst, username, body)
         self.redirect('/')
 
+    def get(self, action, msgid):
+        action = urllib.unquote(action)
+        msgid = urllib.unquote(msgid)
+        print action, msgid
+        # get cookie
+        cookie = self.get_cookie('session')
+        # get username
+        username = sessions.get_username(cookie)
+        
+        if action == 'del':
+            print 'hello'
+            inbox.del_msg(msgid)
+        elif action == 'read':
+            pass
+        self.redirect('/')
+
+class GrpMsgHandler(tornado.web.RequestHandler):
+    def post(self):
+        # get cookie
+        cookie = self.get_cookie('session')
+        # get username
+        username = sessions.get_username(cookie)
+        # get user
+        dst = self.get_argument('grpdst', '') 
+        body = self.get_argument('grpbody', '')
+
+        inbox.send(dst, username, body, grp=True)
+        self.redirect('/')
 
 class LoginHandler(tornado.web.RequestHandler):
     def get(self):
@@ -141,6 +176,7 @@ if __name__ == "__main__":
     database = connection.chat
     users = im_userDAO.UserDAO(database)
     sessions = im_sessionDAO.SessionDAO(database)
+    inbox = im_inboxDAO.InboxDAO(database)
 
     tornado.options.parse_command_line()
     app = tornado.web.Application(handlers=[
@@ -148,6 +184,9 @@ if __name__ == "__main__":
             (r"/login", LoginHandler), 
             (r"/logout", LogoutHandler), 
             (r"/msg/new", MsgHandler), 
+            (r"/msg/(del)/([^/]+)", MsgHandler), 
+            # (r"/msg/del/([^/]+)", MsgHandler), 
+            (r"/grpmsg/new", GrpMsgHandler), 
             (r'/signup', SignupHandler)], 
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
         static_path=os.path.join(os.path.dirname(__file__), "static"),
