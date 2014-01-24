@@ -32,8 +32,10 @@
 <div id="groups">
     <h3>groups</h3>
     <ul> 
-    {% for grp in groups %}
-        <li>{{grp}}</li>
+    {% for grp, member in groups %}
+        <li>{{grp}}
+        <a href="/grp/{{'leave' if member else 'join'}}/{{grp}}">{{'leave' if member else 'join'}}</a>
+        </li>
     {% end %}
     </ul>
 </div>

@@ -8,6 +8,7 @@ class UserDAO:
     def __init__(self, db):
         self.db = db
         self.users = self.db.users
+        self.groups = self.db.groups
         self.SECRET = 'verysecret'
 
     def make_salt(self):
@@ -45,6 +46,7 @@ class UserDAO:
     def add_user(self, username, password, email):
         password_hash = self.make_pw_hash(password)
 
+        # all is the default group where everybody is in
         user = {'_id': username, 'password': password_hash,
                 'groups': ['all']}
         if email != "":
@@ -62,11 +64,68 @@ class UserDAO:
         return True
 
     def get_user(self, username):
+        """
+        TODO: error checking
+        """
         return self.users.find_one({'_id':username})
 
-    def send_msg(self, src, dst, body):
-        msg = {'id': 0, 'from': src, 'body': body }
-        user = self.users.find_one({'_id':dst})
-        self.users.update({'_id':dst}, {'$push': {'inbox': msg}})
+
+    def join_group(self, username, group):
+        """
+        the UI should ensure that the error cases don't happen.
+        so maybe the logic can be simplied. 
+        """
+        # if user already part of the group
+        user = self.get_user(username)
+        if group in user['groups']:
+            print 'already a member'
+            return False
+        # if group doesn't exist
+        if not self.groups.find_one({'_id':group}):
+            print 'the group does not exist'
+            return False
+
+        # add the group into the user record
+        try:
+            self.users.update({'_id':username}, {'$push': {'groups': group}})
+        except:
+            print "Unexpected error:", sys.exc_info()[0]
+            return False
+        return True
+
+    def leave_group(self, username, group):
+        user = self.get_user(username)
+        if group not in user['groups']:
+            print 'user not in this group'
+            return False
+
+        # remove the group from the user record
+        try:
+            self.users.update({'_id':username}, {'$pull': {'groups': group}})
+        except:
+            print "Unexpected error:", sys.exc_info()[0]
+            return False
+        return True
+
+
+    def get_groups(self):
+        """
+        return all the groups
+        TODO: error checking
+        """
+        return self.groups.find()
+
+    def get_groups_membership(self, username):
+        """
+        return all the groups and indicate the membership of the user
+        """
+        user = self.get_user(username)
+        user_groups = user['groups']
+        print user_groups
+        all_groups = self.get_groups()
+        # print [(group, group in user_groups) for group in all_groups]
+        return [(group['_id'], group['_id'] in user_groups) for group in all_groups]
+
+
 
 

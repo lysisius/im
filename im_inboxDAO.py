@@ -53,19 +53,9 @@ class InboxDAO:
         grp is probably not going to simply be a list of strings, but
         also include the last sequence number
         """
-        inbox = []
-        msgs = self.inbox.find({'dst': dst})
-        if msgs:
-            inbox += msgs
-        for grp in grps:
-            grp_msgs = self.grp_inbox.find({'dst': grp})
-            if grp_msgs:
-                inbox += grp_msgs
-        return inbox
+        return self.inbox.find({'dst': dst})
 
     def del_msg(self, msgid):
-        print 'hey there'
-        print ObjectId(msgid)
         try:
             self.inbox.remove({'_id':ObjectId(msgid)})
         except:

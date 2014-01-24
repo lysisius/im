@@ -23,12 +23,11 @@ class IndexHandler(tornado.web.RequestHandler):
         # get online usernames
         all_users = sessions.get_sessions()
         # get inbox, contacts, groups
-
         user = users.get_user(username)
         if not user:
             self.redirect('/signup')
         else:
-            groups = user['groups']
+            groups = users.get_groups_membership(username)
             messages = inbox.get_msg(username, groups)
             self.render('im_main.html', 
                         username=username, 
@@ -60,10 +59,24 @@ class MsgHandler(tornado.web.RequestHandler):
         username = sessions.get_username(cookie)
         
         if action == 'del':
-            print 'hello'
             inbox.del_msg(msgid)
         elif action == 'read':
             pass
+        self.redirect('/')
+
+class GrpMemberHandler(tornado.web.RequestHandler):
+    def get(self, action, grpname):
+        action = urllib.unquote(action)
+        grpname = urllib.unquote(grpname)
+        print action, grpname
+        # get cookie
+        cookie = self.get_cookie('session')
+        # get username
+        username = sessions.get_username(cookie)
+        if action == 'join':
+            users.join_group(username, grpname)
+        elif action == 'leave':
+            users.leave_group(username, grpname)
         self.redirect('/')
 
 class GrpMsgHandler(tornado.web.RequestHandler):
@@ -185,6 +198,7 @@ if __name__ == "__main__":
             (r"/logout", LogoutHandler), 
             (r"/msg/new", MsgHandler), 
             (r"/msg/(del)/([^/]+)", MsgHandler), # use brackets!  
+            (r"/grp/(join|leave)/([^/]+)", GrpMemberHandler), # use brackets!  
             (r"/grpmsg/new", GrpMsgHandler), 
             (r'/signup', SignupHandler)], 
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
