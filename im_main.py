@@ -184,8 +184,7 @@ if __name__ == "__main__":
             (r"/login", LoginHandler), 
             (r"/logout", LogoutHandler), 
             (r"/msg/new", MsgHandler), 
-            (r"/msg/(del)/([^/]+)", MsgHandler), 
-            # (r"/msg/del/([^/]+)", MsgHandler), 
+            (r"/msg/(del)/([^/]+)", MsgHandler), # use brackets!  
             (r"/grpmsg/new", GrpMsgHandler), 
             (r'/signup', SignupHandler)], 
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
