@@ -121,7 +121,6 @@ class UserDAO:
         """
         user = self.get_user(username)
         user_groups = user['groups']
-        print user_groups
         all_groups = self.get_groups()
         # print [(group, group in user_groups) for group in all_groups]
         return [(group['_id'], group['_id'] in user_groups) for group in all_groups]

@@ -59,8 +59,13 @@
 </div>
 <div id="inbox">
     <h3>inbox <a href="/">refresh</a></h3>
-    {% for message in messages %}
-    {% module Template("im_msg.html", message=message) %}
+    <h4>unread </h4>
+    {% for message in msg_new %}
+      {% module Template("im_msg.html", message=message) %}
+    {% end %}
+    <h4>read </h4>
+    {% for message in msg_read %}
+      {% module Template("im_msg.html", message=message) %}
     {% end %}
 </div>
 

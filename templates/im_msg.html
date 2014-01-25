@@ -1,4 +1,7 @@
 <div class="message" id="m{{ message["_id"] }}">
     <b>{{ message["src"] }}: </b>{% module linkify(message["body"]) %}
+    {% if not message['read'] %}
+    <a href="/msg/read/{{message["_id"]}}">read</a>
+    {% end %}
     <a href="/msg/del/{{message["_id"]}}">delete</a>
 </div>

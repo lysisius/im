@@ -61,14 +61,18 @@ class InboxDAO:
         except:
             print 'error deleting the msg with id %s' % msgid
             print "Unexpected error:", sys.exc_info()[0]
-        return
 
 
-    def read(self, msgid):
+    def read_msg(self, msgid):
         """
         mark the message as read
         """
-        pass
+        try:
+            self.inbox.update({'_id':ObjectId(msgid)}, 
+                              {'$set': {'read': True}})
+        except:
+            print 'error deleting the msg with id %s' % msgid
+            print "Unexpected error:", sys.exc_info()[0]
 
 
 

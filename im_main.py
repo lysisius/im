@@ -29,9 +29,20 @@ class IndexHandler(tornado.web.RequestHandler):
         else:
             groups = users.get_groups_membership(username)
             messages = inbox.get_msg(username, groups)
+            # optimize this
+            msg_new = []
+            msg_read = []
+            for m in messages:
+                if not m['read']:
+                    msg_new.append(m)
+                else:
+                    msg_read.append(m)
+            print 'new', msg_new
+            print 'read', msg_read
             self.render('im_main.html', 
                         username=username, 
-                        messages=messages,
+                        msg_new=msg_new,
+                        msg_read=msg_read,
                         all_users = all_users,
                         groups=groups)
 
@@ -61,7 +72,7 @@ class MsgHandler(tornado.web.RequestHandler):
         if action == 'del':
             inbox.del_msg(msgid)
         elif action == 'read':
-            pass
+            inbox.read_msg(msgid)
         self.redirect('/')
 
 class GrpMemberHandler(tornado.web.RequestHandler):
@@ -147,7 +158,6 @@ class SignupHandler(tornado.web.RequestHandler):
             print session_id
             self.set_cookie("session", session_id)
             self.redirect("/")
-            # self.render('im_main.html', username=username, messages=test_msgs)
         else:
             print "user did not validate"
             self.render('im_signup.html', username=username,
@@ -197,7 +207,7 @@ if __name__ == "__main__":
             (r"/login", LoginHandler), 
             (r"/logout", LogoutHandler), 
             (r"/msg/new", MsgHandler), 
-            (r"/msg/(del)/([^/]+)", MsgHandler), # use brackets!  
+            (r"/msg/(del|read)/([^/]+)", MsgHandler), # use brackets!  
             (r"/grp/(join|leave)/([^/]+)", GrpMemberHandler), # use brackets!  
             (r"/grpmsg/new", GrpMsgHandler), 
             (r'/signup', SignupHandler)], 
