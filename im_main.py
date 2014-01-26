@@ -59,6 +59,7 @@ class IndexHandler(BaseHandler):
         messages = inbox.get_msg(username, groups, _cb)
 
 class MsgHandler(BaseHandler):
+    @tornado.web.asynchronous
     def post(self):
         username = self.get_current_user()
         # get user
@@ -66,8 +67,11 @@ class MsgHandler(BaseHandler):
         dst = self.get_argument('dst', '') 
         body = self.get_argument('body', '')
         # users.send_msg(username, dst, body)
-        inbox.send(dst, username, body)
-        self.redirect('/')
+        def _cb(r, error):
+            print 'err: ', error
+            assert not error
+            self.redirect('/')
+        inbox.send(dst, username, body, send_cb=_cb)
 
     def get(self, action, msgid):
         action = urllib.unquote(action)
@@ -95,14 +99,18 @@ class GrpMemberHandler(BaseHandler):
         self.redirect('/')
 
 class GrpMsgHandler(BaseHandler):
+    @tornado.web.asynchronous
     def post(self):
         username = self.get_current_user()
         # get user
         dst = self.get_argument('grpdst', '') 
         body = self.get_argument('grpbody', '')
 
-        inbox.send(dst, username, body, grp=True)
-        self.redirect('/')
+        def _cb(r, error):
+            print 'err: ', error
+            assert not error
+            self.redirect('/')
+        inbox.send(dst, username, body, grp=True, send_cb=_cb)
 
 class LoginHandler(BaseHandler):
     def get(self):

@@ -5,32 +5,38 @@ from bson.objectid import ObjectId # holy ((*^(&^&^&)))
 
 
 class InboxDAO:
-    def __init__(self, database, asyncdb):
-        self.db = database
-        self.asyncdb = asyncdb
-        self.inbox = database.inbox
-        self.inbox_async = asyncdb.inbox
-        self.users = database.users
+    def __init__(self, db, asyncdb):
+        self.db = db
+        self.inbox = db.inbox
 
-    def send(self, dst, src, body, grp=False):
+        self.asyncdb = asyncdb
+        self.inbox_async = asyncdb.inbox
+        self.users_async = asyncdb.users
+
+    def send(self, dst, src, body, grp=False, send_cb=None):
         # no validation on the dst, assuming the it's done before it gets here
         try:
             if grp:
                 # self.grp_inbox.insert(msg)
                 # TODO: this is probably the bottle neck
-                user_grp = self.users.find({'groups':dst})
-                for user in user_grp:
-                    print user['_id']
-                    msg = {
-                    'dst': user['_id'],
-                    'src': src,
-                    'body': body,
-                    'read': False,
-                    'date': datetime.datetime.utcnow(),
-                    'grp': dst
-                    }
-                    self.inbox.insert(msg)
-                print '%s sends a msg to group (%s)' %(src, dst)
+                # Need to figure out if an index can help
+                def _cb(user_grp, error): # why error has to be spelled exactly?
+                    assert not error
+                    msgs = []
+                    for user in user_grp:
+                        print user['_id']
+                        msg = {
+                        'dst': user['_id'],
+                        'src': src,
+                        'body': body,
+                        'read': False,
+                        'date': datetime.datetime.utcnow(),
+                        'grp': dst
+                        }
+                        msgs.append(msg)
+                    self.inbox_async.insert(msgs, callback=send_cb)
+                    print '%s sends a msg to group (%s)' %(src, dst)
+                self.users_async.find({'groups':dst}, callback=_cb)
             else:
                 msg = {
                 'dst': dst,
@@ -40,11 +46,11 @@ class InboxDAO:
                 'date': datetime.datetime.utcnow(),
                 'grp': None
                 }
-                self.inbox.insert(msg)
+                self.inbox_async.insert(msg, callback=send_cb)
+                # self.inbox.insert(msg)
                 print '%s sends a msg to %s' %(src, dst)
         except:
             print 'error inserting the msg'
-            print msg
             print "Unexpected error:", sys.exc_info()[0]
             return False
 
