@@ -8,7 +8,12 @@ class UserDAO:
     def __init__(self, db):
         self.db = db
         self.users = self.db.users
+        # self.users_cache = {}
         self.groups = self.db.groups
+        self.groups_cache = []
+        print 'DB read: groups'
+        for group in self.groups.find():
+            self.groups_cache.append(group)
         self.SECRET = 'verysecret'
 
     def make_salt(self):
@@ -113,7 +118,7 @@ class UserDAO:
         return all the groups
         TODO: error checking
         """
-        return self.groups.find()
+        return self.groups_cache
 
     def get_groups_membership(self, username):
         """

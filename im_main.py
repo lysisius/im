@@ -14,44 +14,48 @@ import urllib
 
 define("port", default=8887, help="run on the given port", type=int)
 
-class IndexHandler(tornado.web.RequestHandler):
-    def get(self):
+class BaseHandler(tornado.web.RequestHandler):
+    def get_current_user(self):
         # get cookie
         cookie = self.get_cookie('session')
         # get username
         username = sessions.get_username(cookie)
+        return username
+    # def _handle_request_exception(self, e):
+    #     logging.error('error')
+
+class IndexHandler(BaseHandler):
+    def get(self):
+        username = self.get_current_user()
         # get online usernames
         all_users = sessions.get_sessions()
         # get inbox, contacts, groups
         user = users.get_user(username)
         if not user:
             self.redirect('/signup')
-        else:
-            groups = users.get_groups_membership(username)
-            messages = inbox.get_msg(username, groups)
-            # optimize this
-            msg_new = []
-            msg_read = []
-            for m in messages:
-                if not m['read']:
-                    msg_new.append(m)
-                else:
-                    msg_read.append(m)
-            print 'new', msg_new
-            print 'read', msg_read
-            self.render('im_main.html', 
-                        username=username, 
-                        msg_new=msg_new,
-                        msg_read=msg_read,
-                        all_users = all_users,
-                        groups=groups)
+            return
+        groups = users.get_groups_membership(username)
+        messages = inbox.get_msg(username, groups)
 
-class MsgHandler(tornado.web.RequestHandler):
+        msg_new, msg_read = [], []
+        # messages is not a list but a pymongo cursor, have to loop through
+        # manually. list comprehension doesn't work
+        for m in messages:
+            if not m['read']:
+                msg_new.append(m)
+            else:
+                msg_read.append(m)
+                
+        self.render('im_main.html', 
+                    username=username, 
+                    msg_new=msg_new,
+                    msg_read=msg_read,
+                    all_users=all_users,
+                    groups=groups)
+
+class MsgHandler(BaseHandler):
     def post(self):
-        # get cookie
-        cookie = self.get_cookie('session')
-        # get username
-        username = sessions.get_username(cookie)
+        username = self.get_current_user()
         # get user
         # user = users.
         dst = self.get_argument('dst', '') 
@@ -64,10 +68,7 @@ class MsgHandler(tornado.web.RequestHandler):
         action = urllib.unquote(action)
         msgid = urllib.unquote(msgid)
         print action, msgid
-        # get cookie
-        cookie = self.get_cookie('session')
-        # get username
-        username = sessions.get_username(cookie)
+        username = self.get_current_user()
         
         if action == 'del':
             inbox.del_msg(msgid)
@@ -75,27 +76,22 @@ class MsgHandler(tornado.web.RequestHandler):
             inbox.read_msg(msgid)
         self.redirect('/')
 
-class GrpMemberHandler(tornado.web.RequestHandler):
+class GrpMemberHandler(BaseHandler):
     def get(self, action, grpname):
         action = urllib.unquote(action)
         grpname = urllib.unquote(grpname)
-        print action, grpname
-        # get cookie
-        cookie = self.get_cookie('session')
-        # get username
-        username = sessions.get_username(cookie)
+
+        username = self.get_current_user()
+
         if action == 'join':
             users.join_group(username, grpname)
         elif action == 'leave':
             users.leave_group(username, grpname)
         self.redirect('/')
 
-class GrpMsgHandler(tornado.web.RequestHandler):
+class GrpMsgHandler(BaseHandler):
     def post(self):
-        # get cookie
-        cookie = self.get_cookie('session')
-        # get username
-        username = sessions.get_username(cookie)
+        username = self.get_current_user()
         # get user
         dst = self.get_argument('grpdst', '') 
         body = self.get_argument('grpbody', '')
@@ -103,13 +99,12 @@ class GrpMsgHandler(tornado.web.RequestHandler):
         inbox.send(dst, username, body, grp=True)
         self.redirect('/')
 
-class LoginHandler(tornado.web.RequestHandler):
+class LoginHandler(BaseHandler):
     def get(self):
         self.render('im_login.html', username='', login_error='')
     def post(self):
         username = self.get_argument("username", "")
         password = self.get_argument("password", "")
-        print "user submitted ", username, "pass ", password
 
         user_record = users.validate_login(username, password)
         if user_record:
@@ -123,14 +118,20 @@ class LoginHandler(tornado.web.RequestHandler):
             # potential escape needed
             self.render('im_login.html', username=username, login_error='Invalid Login')
 
-class LogoutHandler(tornado.web.RequestHandler):
+class LogoutHandler(BaseHandler):
     def get(self):
         cookie = self.get_cookie('session')
         sessions.end_session(cookie)
         self.set_cookie('session', '')
         self.redirect('/signup')
 
-class SignupHandler(tornado.web.RequestHandler):
+class ErrorHandler(BaseHandler):
+    def get(self):
+        self.write('error')
+    def post(self):
+        self.write('error')
+
+class SignupHandler(BaseHandler):
     def get(self):
         self.render('im_signup.html', username='', username_error='',
             password_error='', verify_error='', email_error='', email='')
@@ -203,14 +204,15 @@ if __name__ == "__main__":
 
     tornado.options.parse_command_line()
     app = tornado.web.Application(handlers=[
-            (r"[/ ]", IndexHandler), 
+            (r"/", IndexHandler), 
             (r"/login", LoginHandler), 
             (r"/logout", LogoutHandler), 
             (r"/msg/new", MsgHandler), 
             (r"/msg/(del|read)/([^/]+)", MsgHandler), # use brackets!  
             (r"/grp/(join|leave)/([^/]+)", GrpMemberHandler), # use brackets!  
             (r"/grpmsg/new", GrpMsgHandler), 
-            (r'/signup', SignupHandler)], 
+            (r'/signup', SignupHandler), 
+            (r'/.*', ErrorHandler)], 
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
         static_path=os.path.join(os.path.dirname(__file__), "static"),
         cookie_secret="bZJc2sWbQLKos6GkHn/VB9oXwQt8S0R0kRvJ5/xJ89E=",

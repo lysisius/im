@@ -7,6 +7,12 @@ class SessionDAO:
     def __init__(self, database):
         self.db = database
         self.sessions = database.sessions
+        self.sessions_cache = {}
+        cursor = self.sessions.find()
+        print 'DB read: sessions'
+        for session in cursor:
+            session_id = session.get('_id')
+            self.sessions_cache[session_id] = session
 
     # will start a new session id by adding a new document to the sessions collection
     # returns the sessionID or None
@@ -19,10 +25,12 @@ class SessionDAO:
         session = {'username': username, '_id': session_id}
         try:
             self.sessions.insert(session, safe=True)
+            print 'DB write: add session'
         except:
             print "Unexpected error on start_session:", sys.exc_info()[0]
             return None
 
+        self.sessions_cache[session_id] = session 
         return str(session['_id'])
 
     # will send a new user session by deleting from sessions table
@@ -30,24 +38,32 @@ class SessionDAO:
         if session_id is None:
             return
         self.sessions.remove({'_id': session_id})
+        print 'DB write: del session'
+        del self.sessions_cache[session_id]
         return
 
     def get_session_by_username(self, username):
-        return self.sessions.find_one({'username':username})
+        """
+        it's a bit more tedious to use cache for this one
+        """
+        for session_id in self.sessions_cache:
+            session = self.sessions_cache[session_id]
+            if session['username'] == username:
+                return session
+        return None
 
     # if there is a valid session, it is returned
     def get_session(self, session_id):
         if session_id is None:
             return None
-        session = self.sessions.find_one({'_id': session_id})
-        return session
+        return self.sessions_cache.get(session_id)
 
     def get_sessions(self):
-        return self.sessions.find({}, {'_id':False, 'username':True})
+        return self.sessions_cache.values()
 
     # get the username of the current session, or None if the session is not valid
     def get_username(self, session_id):
-        session = self.get_session(session_id)
+        session = self.sessions_cache.get(session_id)
         if session is None:
             return None
         else:
