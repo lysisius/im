@@ -13,6 +13,9 @@ class InboxDAO:
         self.inbox_async = asyncdb.inbox
         self.users_async = asyncdb.users
 
+        self.inbox_cache = []
+
+
     def send(self, dst, src, body, grp=False, send_cb=None):
         # no validation on the dst, assuming the it's done before it gets here
         try:
@@ -60,12 +63,19 @@ class InboxDAO:
         # True means successful
         return True
 
-    def get_msg(self, dst, grps, cb):
+    def inbox_cache_cb(self, msgs, error):
+        self.inbox_cache = []
+        for m in msgs:
+            self.inbox_cache.append(m)
+        print 'updated inbox_cache, msg count:', len(self.inbox_cache)
+
+    def get_msg(self, dst, grps):
         """
         grp is probably not going to simply be a list of strings, but
         also include the last sequence number
         """
-        return self.inbox_async.find({'dst': dst}, callback=cb)
+        self.inbox_async.find({'dst': dst}, callback=self.inbox_cache_cb)
+        return [m for m in self.inbox_cache if m['dst']==dst]
 
     def del_msg(self, msgid):
         try:

@@ -26,7 +26,7 @@ class BaseHandler(tornado.web.RequestHandler):
     #     logging.error('error')
 
 class IndexHandler(BaseHandler):
-    @tornado.web.asynchronous
+    # @tornado.web.asynchronous
     def get(self):
         username = self.get_current_user()
         # get online usernames
@@ -43,25 +43,22 @@ class IndexHandler(BaseHandler):
         all the time. the next step is to take the inbox
         page out
         """
-        def _cb(messages, error):
-            msg_new, msg_read = [], []
-            # messages is not a list but a pymongo cursor, have to loop through
-            # manually. list comprehension doesn't work
-            for m in messages:
-                if not m['read']:
-                    msg_new.append(m)
-                else:
-                    msg_read.append(m)
-                    
-            self.render('im_main.html', 
-                        username=username, 
-                        msg_new=msg_new,
-                        msg_read=msg_read,
-                        all_users=all_users,
-                        groups=groups)
-            # self.finish() # this is not really needed
-
-        messages = inbox.get_msg(username, groups, _cb)
+        messages = inbox.get_msg(username, groups)
+        msg_new, msg_read = [], []
+        # messages is not a list but a pymongo cursor, have to loop through
+        # manually. list comprehension doesn't work
+        for m in messages:
+            if not m['read']:
+                msg_new.append(m)
+            else:
+                msg_read.append(m)
+                
+        self.render('im_main.html', 
+                    username=username, 
+                    msg_new=msg_new,
+                    msg_read=msg_read,
+                    all_users=all_users,
+                    groups=groups)
 
 class MsgHandler(BaseHandler):
     @tornado.web.asynchronous
@@ -115,8 +112,9 @@ class GrpMsgHandler(BaseHandler):
         def _cb(r, error):
             print 'err: ', error
             assert not error
-            self.redirect('/')
+            # self.redirect('/')
         inbox.send(dst, username, body, grp=True, send_cb=_cb)
+        self.redirect('/')
 
 class LoginHandler(BaseHandler):
     def get(self):
