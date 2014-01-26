@@ -6,6 +6,7 @@ import tornado.web
 from tornado.options import define, options
 
 import pymongo
+import asyncmongo
 import im_userDAO
 import im_sessionDAO
 import im_inboxDAO
@@ -25,6 +26,7 @@ class BaseHandler(tornado.web.RequestHandler):
     #     logging.error('error')
 
 class IndexHandler(BaseHandler):
+    @tornado.web.asynchronous
     def get(self):
         username = self.get_current_user()
         # get online usernames
@@ -35,23 +37,26 @@ class IndexHandler(BaseHandler):
             self.redirect('/signup')
             return
         groups = users.get_groups_membership(username)
-        messages = inbox.get_msg(username, groups)
 
-        msg_new, msg_read = [], []
-        # messages is not a list but a pymongo cursor, have to loop through
-        # manually. list comprehension doesn't work
-        for m in messages:
-            if not m['read']:
-                msg_new.append(m)
-            else:
-                msg_read.append(m)
-                
-        self.render('im_main.html', 
-                    username=username, 
-                    msg_new=msg_new,
-                    msg_read=msg_read,
-                    all_users=all_users,
-                    groups=groups)
+        def _cb(messages, error):
+            msg_new, msg_read = [], []
+            # messages is not a list but a pymongo cursor, have to loop through
+            # manually. list comprehension doesn't work
+            for m in messages:
+                if not m['read']:
+                    msg_new.append(m)
+                else:
+                    msg_read.append(m)
+                    
+            self.render('im_main.html', 
+                        username=username, 
+                        msg_new=msg_new,
+                        msg_read=msg_read,
+                        all_users=all_users,
+                        groups=groups)
+            # self.finish() # this is not really needed
+
+        messages = inbox.get_msg(username, groups, _cb)
 
 class MsgHandler(BaseHandler):
     def post(self):
@@ -198,9 +203,14 @@ if __name__ == "__main__":
     connection_string = "mongodb://localhost"
     connection = pymongo.MongoClient(connection_string)
     database = connection.chat
-    users = im_userDAO.UserDAO(database)
+
+    asyncdb = asyncmongo.Client(
+        pool_id='test', host='localhost', port=27017, dbname='chat')
+
+
+    users = im_userDAO.UserDAO(database, asyncdb)
     sessions = im_sessionDAO.SessionDAO(database)
-    inbox = im_inboxDAO.InboxDAO(database)
+    inbox = im_inboxDAO.InboxDAO(database, asyncdb)
 
     tornado.options.parse_command_line()
     app = tornado.web.Application(handlers=[

@@ -3,18 +3,24 @@ import random
 import string
 import hashlib
 import pymongo
+import asyncmongo
 
 class UserDAO:
-    def __init__(self, db):
+    def __init__(self, db, asyncdb):
         self.db = db
+        self.asyncdb = asyncdb
         self.users = self.db.users
-        # self.users_cache = {}
-        self.groups = self.db.groups
-        self.groups_cache = []
-        print 'DB read: groups'
-        for group in self.groups.find():
-            self.groups_cache.append(group)
+        self.groups_async = self.asyncdb.groups
+        self.groups = db.groups
         self.SECRET = 'verysecret'
+        self.groups_cache = []
+
+        def group_cb(response, error):
+            assert not error
+            for group in response:
+                self.groups_cache.append(group)
+        self.groups_async.find({}, callback=group_cb)
+
 
     def make_salt(self):
         salt = ""

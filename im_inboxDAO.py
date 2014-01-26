@@ -5,9 +5,11 @@ from bson.objectid import ObjectId # holy ((*^(&^&^&)))
 
 
 class InboxDAO:
-    def __init__(self, database):
+    def __init__(self, database, asyncdb):
         self.db = database
+        self.asyncdb = asyncdb
         self.inbox = database.inbox
+        self.inbox_async = asyncdb.inbox
         self.users = database.users
 
     def send(self, dst, src, body, grp=False):
@@ -15,8 +17,8 @@ class InboxDAO:
         try:
             if grp:
                 # self.grp_inbox.insert(msg)
+                # TODO: this is probably the bottle neck
                 user_grp = self.users.find({'groups':dst})
-                print user_grp
                 for user in user_grp:
                     print user['_id']
                     msg = {
@@ -42,18 +44,19 @@ class InboxDAO:
                 print '%s sends a msg to %s' %(src, dst)
         except:
             print 'error inserting the msg'
+            print msg
             print "Unexpected error:", sys.exc_info()[0]
             return False
 
         # True means successful
         return True
 
-    def get_msg(self, dst, grps):
+    def get_msg(self, dst, grps, cb):
         """
         grp is probably not going to simply be a list of strings, but
         also include the last sequence number
         """
-        return self.inbox.find({'dst': dst})
+        return self.inbox_async.find({'dst': dst}, callback=cb)
 
     def del_msg(self, msgid):
         try:
