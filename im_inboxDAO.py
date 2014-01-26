@@ -24,7 +24,6 @@ class InboxDAO:
                     assert not error
                     msgs = []
                     for user in user_grp:
-                        print user['_id']
                         msg = {
                         'dst': user['_id'],
                         'src': src,
@@ -34,9 +33,13 @@ class InboxDAO:
                         'grp': dst
                         }
                         msgs.append(msg)
+                    print 'inserting, ', len(msgs), 'msgs'
                     self.inbox_async.insert(msgs, callback=send_cb)
                     print '%s sends a msg to group (%s)' %(src, dst)
-                self.users_async.find({'groups':dst}, callback=_cb)
+                # it's the limit, stupid
+                self.users_async.find({'groups':dst}, limit=10**5, callback=_cb)
+                # user_grp = self.users.find({'groups':dst})
+                # _cb(user_grp, None)
             else:
                 msg = {
                 'dst': dst,

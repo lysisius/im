@@ -38,6 +38,11 @@ class IndexHandler(BaseHandler):
             return
         groups = users.get_groups_membership(username)
 
+        """
+        TODO: the problem here is that index page gets requested
+        all the time. the next step is to take the inbox
+        page out
+        """
         def _cb(messages, error):
             msg_new, msg_read = [], []
             # messages is not a list but a pymongo cursor, have to loop through
@@ -70,8 +75,9 @@ class MsgHandler(BaseHandler):
         def _cb(r, error):
             print 'err: ', error
             assert not error
-            self.redirect('/')
+            # self.redirect('/')
         inbox.send(dst, username, body, send_cb=_cb)
+        self.redirect('/')
 
     def get(self, action, msgid):
         action = urllib.unquote(action)
