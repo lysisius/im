@@ -13,7 +13,7 @@ class InboxDAO:
         self.inbox_async = asyncdb.inbox
         self.users_async = asyncdb.users
 
-        self.inbox_cache = []
+        self.inbox_cache = {}
 
 
     def send(self, dst, src, body, grp=False, send_cb=None):
@@ -63,22 +63,39 @@ class InboxDAO:
         # True means successful
         return True
 
-    def inbox_cache_cb(self, msgs, error):
-        self.inbox_cache = []
-        for m in msgs:
-            self.inbox_cache.append(m)
-        print 'updated inbox_cache, msg count:', len(self.inbox_cache)
+    # TODO: this is completely broke. use a hashtable
+    # def get_msg(self, dst, grps):
+    #     """
+    #     grp is probably not going to simply be a list of strings, but
+    #     also include the last sequence number
+    #     """
+    #     def _cb(msgs, error):
+    #         # if dst not in self.inbox_cache:
+    #         self.inbox_cache[dst] = []
+    #         for m in msgs:
+    #             self.inbox_cache[dst].append(m)
+    #         print 'updated inbox_cache, msg count:', len(self.inbox_cache)
+    #     # return [m for m in self.inbox_cache if m['dst']==dst]
+    #     # self.inbox_async.find({'dst': dst}, callback=_cb)
+    #     if not self.inbox_cache.get(dst):
+    #         msgs = self.inbox.find({'dst': dst})
+    #         self.inbox_cache[dst] = []
+    #         for m in msgs:
+    #             self.inbox_cache[dst].append(m)
+    #     return self.inbox_cache.get(dst)
 
     def get_msg(self, dst, grps):
-        """
-        grp is probably not going to simply be a list of strings, but
-        also include the last sequence number
-        """
-        self.inbox_async.find({'dst': dst}, callback=self.inbox_cache_cb)
-        return [m for m in self.inbox_cache if m['dst']==dst]
+        return self.inbox.find({'dst': dst})
 
     def del_msg(self, msgid):
         try:
+            # TODO: delete in cache
+            # msgs_cache = self.inbox_cache[dst]
+            # for m in msgs_cache:
+            #     if m['_id'] == msgid:
+            #         print m['body']
+            #         msgs_cache.remove(m) # risky business
+
             self.inbox.remove({'_id':ObjectId(msgid)})
         except:
             print 'error deleting the msg with id %s' % msgid
@@ -90,8 +107,16 @@ class InboxDAO:
         mark the message as read
         """
         try:
+            # TODO: mark as read in cache
             self.inbox.update({'_id':ObjectId(msgid)}, 
                               {'$set': {'read': True}})
+            # msgs_cache = self.inbox_cache.get(dst)
+            # for m in msgs_cache:
+            #     print m['body']
+            #     if m['_id'] == msgid:
+            #         print m['body']
+            #         m['read'] = True
+            # print self.inbox_cache
         except:
             print 'error deleting the msg with id %s' % msgid
             print "Unexpected error:", sys.exc_info()[0]
