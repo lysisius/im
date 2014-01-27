@@ -41,8 +41,6 @@ class InboxDAO:
                     print '%s sends a msg to group (%s)' %(src, dst)
                 # it's the limit, stupid
                 self.users_async.find({'groups':dst}, limit=10**5, callback=_cb)
-                # user_grp = self.users.find({'groups':dst})
-                # _cb(user_grp, None)
             else:
                 msg = {
                 'dst': dst,
