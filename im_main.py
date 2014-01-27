@@ -26,7 +26,7 @@ class BaseHandler(tornado.web.RequestHandler):
     #     logging.error('error')
 
 class IndexHandler(BaseHandler):
-    # @tornado.web.asynchronous
+    @tornado.web.asynchronous
     def get(self):
         username = self.get_current_user()
         # get online usernames
