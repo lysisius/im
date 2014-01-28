@@ -90,7 +90,6 @@ class InboxDAO:
         try:
             self.inbox.update({'_id':ObjectId(msgid)}, 
                               {'$set': {'read': True}})
-            self.inbox_cache.clear()
             if ObjectId(msgid) in self.inbox_cache:
                 self.inbox_cache[ObjectId(msgid)]['read'] = True
         except:
